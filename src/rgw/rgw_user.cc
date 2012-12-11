@@ -786,7 +786,7 @@ bool RGWAccessKeyPool::check_existing_key(RGWUserAdminRequest req)
   return false;
 }
 
-bool RGWAccessKeyPool::check_request(RGWUserAdminRequest req,\
+bool RGWAccessKeyPool::check_request(RGWUserAdminRequest &req,\
      std::string &err_msg)
 {
   bool found;
@@ -1250,7 +1250,7 @@ bool RGWSubUserPool::exists(std::string subuser)
   return false;
 }
 
-bool RGWSubUserPool::check_request(RGWUserAdminRequest req,\
+bool RGWSubUserPool::check_request(RGWUserAdminRequest &req,\
         std::string &err_msg)
 {
   bool checked = true;
@@ -1759,7 +1759,7 @@ bool RGWUser::update(std::string &err_msg)
   return true;
 }
 
-bool RGWUser::check_request(RGWUserAdminRequest req, std::string &err_msg)
+bool RGWUser::check_request(RGWUserAdminRequest &req, std::string &err_msg)
 {
   int ret;
   std::string subprocess_msg;
@@ -1773,7 +1773,7 @@ bool RGWUser::check_request(RGWUserAdminRequest req, std::string &err_msg)
 
   if (populated && (req.user_id != user_id)) {
     err_msg = "user id mismatch, requested id: " + req.user_id\
-            + "does not match: " + user_id;
+            + " does not match: " + user_id;
 
     return false;
   }
@@ -1823,14 +1823,16 @@ bool RGWUser::execute_add(RGWUserAdminRequest req, std::string &err_msg)
     return false;
 
   // fail if the user exists already
-  if (req.existing_user)
+  if (req.existing_user) {
+    err_msg = "user: " + req.user_id + " exists";
     return false;
+  }
 
   // fail if the display name was not included
   if (!req.display_name_specified) {
     err_msg = "no display name specified";
     return false;
-  } 
+  }
 
   // set the user info
   user_info.user_id = req.user_id;
@@ -1843,6 +1845,7 @@ bool RGWUser::execute_add(RGWUserAdminRequest req, std::string &err_msg)
     user_info.max_buckets = req.max_buckets;
 
   populated = true;
+  failure = false;
 
   // see if we need to add an access key
   if (req.gen_access || req.id_specified) {

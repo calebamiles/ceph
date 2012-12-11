@@ -252,7 +252,7 @@ private:
   bool modify_key(RGWUserAdminRequest req, string &err_msg);
 
   bool check_existing_key(RGWUserAdminRequest req);
-  bool check_request(RGWUserAdminRequest req, string &err_msg);
+  bool check_request(RGWUserAdminRequest &req, string &err_msg);
 
   /* API Contract Fulfilment */
   bool execute_add(RGWUserAdminRequest req, string &err_msg, bool defer_save);
@@ -282,7 +282,7 @@ class RGWSubUserPool
   map<string, RGWSubUser> *subuser_map;
 
 private:
-  bool check_request(RGWUserAdminRequest req, string &err_msg);
+  bool check_request(RGWUserAdminRequest &req, string &err_msg);
 
   /* API Contract Fulfilment */
   bool execute_add(RGWUserAdminRequest req, string &err_msg, bool defer_save);
@@ -335,7 +335,7 @@ private:
   bool populated;
 
   void set_failure() { failure = true; };
-  bool check_request(RGWUserAdminRequest req, string &err_msg);
+  bool check_request(RGWUserAdminRequest &req, string &err_msg);
   bool update(std::string &err_msg);
  
   /* API Contract Fulfilment */

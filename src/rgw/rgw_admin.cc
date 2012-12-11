@@ -726,9 +726,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -739,14 +742,17 @@ int main(int argc, char **argv)
 
     removed = user->remove(req, err_msg);
     if (!removed) {
-      cerr << "could not create user: " << err_msg << std::endl;
+      cerr << "could not remove user: " << err_msg << std::endl;
       return 1;
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -761,9 +767,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -781,9 +790,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -801,9 +813,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -819,9 +834,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -836,9 +854,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -853,9 +874,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -870,9 +894,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -887,9 +914,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -904,9 +934,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -921,9 +954,12 @@ int main(int argc, char **argv)
     }
 
     fetched = user->info(info, err_msg);
-    if (fetched) {
-      show_user_info(info, formatter);
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
     }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
@@ -933,9 +969,12 @@ int main(int argc, char **argv)
 
 
     fetched = user->info(info, err_msg);
-     if (fetched) {
-       show_user_info(info, formatter);
-     }
+    if (!fetched) {
+      cerr << "could not fetch user info: " << err_msg << std::endl;
+      return 1;
+    }
+
+    show_user_info(info, formatter);
 
     delete user;
     break;
