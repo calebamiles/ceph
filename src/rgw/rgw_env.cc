@@ -74,6 +74,22 @@ size_t RGWEnv::get_size(const char *name, size_t def_val)
   return atoll(s);  
 }
 
+bool RGWEnv::exists(const char *name)
+{
+  map<string, string>::iterator iter = env_map.find(name);
+  return (iter != env_map.end());
+}
+
+bool RGWEnv::exists_prefix(const char *prefix)
+{
+  map<string, string>::iterator iter = env_map.upper_bound(prefix);
+
+  if (iter == env_map.end())
+    iter--;
+
+  return (strncmp(iter->first.c_str(), prefix, sizeof(prefix)) == 0);
+}
+
 void RGWConf::init(CephContext *cct, RGWEnv *env)
 {
   enable_ops_log = cct->_conf->rgw_enable_ops_log;

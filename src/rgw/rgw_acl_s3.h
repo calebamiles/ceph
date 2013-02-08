@@ -8,6 +8,7 @@
 
 #include <expat.h>
 
+#include "include/str_list.h"
 #include "rgw_xml.h"
 #include "rgw_acl.h"
 
@@ -66,7 +67,8 @@ public:
     out << "</AccessControlList>";
   }
 
-  bool create_canned(string id, string name, string canned_acl);
+  int create_canned(string id, string name, string canned_acl);
+  int create_from_grants(struct req_state *s, std::list<ACLGrant>& grants);
 };
 
 class ACLOwner_S3 : public ACLOwner, public XMLObj
@@ -104,13 +106,15 @@ public:
   }
   int rebuild(RGWRados *store, ACLOwner *owner, RGWAccessControlPolicy& dest);
   bool compare_group_name(string& id, ACLGroupTypeEnum group);
-  virtual bool create_canned(string id, string name, string canned_acl) {
+  virtual int create_canned(string id, string name, string canned_acl) {
     RGWAccessControlList_S3& _acl = static_cast<RGWAccessControlList_S3 &>(acl);
-    bool ret = _acl.create_canned(id, name, canned_acl);
+    int ret = _acl.create_canned(id, name, canned_acl);
     owner.set_id(id);
     owner.set_name(name);
     return ret;
   }
+  int create_from_headers(RGWRados *store, struct req_state *s);
+  int create_policy(RGWRados *store, struct req_state *s);
 };
 
 /**

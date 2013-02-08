@@ -255,6 +255,30 @@ bool parse_iso8601(const char *s, struct tm *t)
   return true;
 }
 
+int parse_key_value(string& in_str, const char *delim, string& key, string& val)
+{
+  int size = in_str.size();
+
+  if (delim == NULL)
+    return -EINVAL;
+
+  int pos = in_str.find(delim);
+  if (pos < 0)
+    return -EINVAL;
+
+  trim_whitespace(in_str.substr(0, pos), key);
+  pos++;
+
+  trim_whitespace(in_str.substr(pos, size - pos), val);
+
+  return 0;
+}
+
+int parse_key_value(string& in_str, string& key, string& val)
+{
+  return parse_key_value(in_str,"=",key,val);
+}
+
 int parse_time(const char *time_str, time_t *time)
 {
   struct tm tm;

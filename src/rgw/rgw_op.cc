@@ -1773,8 +1773,9 @@ void RGWPutACLs::execute()
     ret = -EINVAL;
     return;
   }
-  if (!s->canned_acl.empty()) {
-    ret = get_canned_policy(owner, ss);
+
+  if (!s->canned_acl.empty() || s->has_acl_header) {
+    ret = get_policy_from_state(store, s, ss);
     if (ret < 0)
       return;
 
@@ -1783,7 +1784,6 @@ void RGWPutACLs::execute()
     data = new_data;
     len = ss.str().size();
   }
-
 
   if (!parser.parse(data, len, 1)) {
     ret = -EACCES;

@@ -279,7 +279,7 @@ void RGWStatBucket_ObjStore_S3::send_response()
 int RGWCreateBucket_ObjStore_S3::get_params()
 {
   RGWAccessControlPolicy_S3 s3policy(s->cct);
-  int r = s3policy.create_canned(s->user.user_id, s->user.display_name, s->canned_acl);
+  int r = s3policy.create_policy(store, s);
   if (r < 0)
     return r;
 
@@ -315,9 +315,9 @@ int RGWPutObj_ObjStore_S3::get_params()
   if (!s->length)
     return -ERR_LENGTH_REQUIRED;
 
-  int r = s3policy.create_canned(s->user.user_id, s->user.display_name, s->canned_acl);
-  if (!r)
-     return -EINVAL;
+  int r = s3policy.create_policy(store, s);
+  if (r < 0)
+     return r;
 
   policy = s3policy;
 
@@ -907,7 +907,7 @@ int RGWPostObj_ObjStore_S3::get_policy()
 
   RGWAccessControlPolicy_S3 s3policy(s->cct);
   ldout(s->cct, 20) << "canned_acl=" << canned_acl << dendl;
-  if (!s3policy.create_canned(s->user.user_id, "", canned_acl)) {
+  if (s3policy.create_canned(s->user.user_id, "", canned_acl) < 0) {
     err_msg = "Bad canned ACLs";
     return -EINVAL;
   }
@@ -1114,9 +1114,9 @@ int RGWCopyObj_ObjStore_S3::init_dest_policy()
   RGWAccessControlPolicy_S3 s3policy(s->cct);
 
   /* build a policy for the target object */
-  ret = s3policy.create_canned(s->user.user_id, s->user.display_name, s->canned_acl);
-  if (!ret)
-     return -EINVAL;
+  ret = s3policy.create_policy(store, s);
+  if (ret < 0)
+     return ret;
 
   dest_policy = s3policy;
 
@@ -1194,12 +1194,12 @@ void RGWGetACLs_ObjStore_S3::send_response()
   s->cio->write(acls.c_str(), acls.size());
 }
 
-int RGWPutACLs_ObjStore_S3::get_canned_policy(ACLOwner& owner, stringstream& ss)
+int RGWPutACLs_ObjStore_S3::get_policy_from_state(RGWRados *store, struct req_state *s, stringstream& ss)
 {
   RGWAccessControlPolicy_S3 s3policy(s->cct);
-  bool r = s3policy.create_canned(owner.get_id(), owner.get_display_name(), s->canned_acl);
-  if (!r)
-    return -EINVAL;
+  int r = s3policy.create_policy(store, s);
+  if (r < 0)
+    return r;
 
   s3policy.to_xml(ss);
 
@@ -1218,8 +1218,8 @@ void RGWPutACLs_ObjStore_S3::send_response()
 int RGWInitMultipart_ObjStore_S3::get_params()
 {
   RGWAccessControlPolicy_S3 s3policy(s->cct);
-  ret = s3policy.create_canned(s->user.user_id, s->user.display_name, s->canned_acl);
-  if (!ret)
+  ret = s3policy.create_policy(store, s);
+  if (ret < 0)
      return -EINVAL;
 
   policy = s3policy;
@@ -1698,6 +1698,8 @@ int RGWHandler_ObjStore_S3::init(RGWRados *store, struct req_state *s, RGWClient
   const char *cacl = s->env->get("HTTP_X_AMZ_ACL");
   if (cacl)
     s->canned_acl = cacl;
+
+  s->has_acl_header = s->env->exists_prefix("HTTP_X_AMZ_GRANT");
 
   s->copy_source = s->env->get("HTTP_X_AMZ_COPY_SOURCE");
 
