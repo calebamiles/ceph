@@ -384,6 +384,7 @@ radosgw_SOURCES = \
         rgw/rgw_rest_swift.cc \
         rgw/rgw_rest_s3.cc \
         rgw/rgw_rest_usage.cc \
+        rgw/rgw_rest_user.cc \
         rgw/rgw_http_client.cc \
         rgw/rgw_swift.cc \
 	rgw/rgw_swift_auth.cc \
@@ -1927,7 +1928,8 @@ noinst_HEADERS = \
 	rgw/rgw_rest_s3.h\
 	rgw/rgw_rest_admin.h\
 	rgw/rgw_rest_usage.h\
-	rgw/rgw_tools.h\
+	rgw/rgw_rest_user.h\
+        rgw/rgw_tools.h\
 	rgw/rgw_usage.h\
 	rgw/rgw_user.h\
 	sample.ceph.conf\
