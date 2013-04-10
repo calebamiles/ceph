@@ -427,6 +427,12 @@ void dump_continue(struct req_state *s)
   s->cio->flush();
 }
 
+void dump_processing(struct req_state *s)
+{
+  dump_status(s, "102");
+  s->cio->flush();
+}
+
 void dump_range(struct req_state *s, uint64_t ofs, uint64_t end, uint64_t total)
 {
   char range_buf[128];

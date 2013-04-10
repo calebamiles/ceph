@@ -316,6 +316,7 @@ extern void dump_last_modified(struct req_state *s, time_t t);
 extern void abort_early(struct req_state *s, int err);
 extern void dump_range(struct req_state *s, uint64_t ofs, uint64_t end, uint64_t total_size);
 extern void dump_continue(struct req_state *s);
+extern void dump_processing(struct req_state *s);
 extern void list_all_buckets_end(struct req_state *s);
 extern void dump_time(struct req_state *s, const char *name, time_t *t);
 extern void dump_bucket_from_state(struct req_state *s);
