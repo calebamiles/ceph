@@ -494,6 +494,7 @@ int main(int argc, const char **argv)
     admin_resource->register_resource("usage", new RGWRESTMgr_Usage);
     admin_resource->register_resource("user", new RGWRESTMgr_User);
     admin_resource->register_resource("bucket", new RGWRESTMgr_Bucket);
+    admin_resource->register_resource("zone", new RGWRESTMgr_Bucket);
     rest.register_resource(g_conf->rgw_admin_entry, admin_resource);
   }
 

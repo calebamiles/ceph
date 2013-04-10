@@ -474,7 +474,10 @@ int XMLArgs::parse()
           (name.compare("caps") == 0) ||
           (name.compare("index") == 0) ||
           (name.compare("policy") == 0) ||
-          (name.compare("object") == 0)) {
+          (name.compare("object") == 0) ||
+          (name.compare("log") == 0) ||
+          (name.compare("pool") == 0) ||
+          (name.compare("garbage") == 0)) {
 
         if (!admin_subresource_added) {
           sub_resources[name] = "";

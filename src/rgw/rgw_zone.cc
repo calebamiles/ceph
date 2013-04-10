@@ -124,7 +124,7 @@ int RGWZoneAdminOp::add_pools(RGWRados *store, RGWZoneAdminOpState& op_state,
   if (pool_names.empty())
     return -EINVAL;
 
-  bool create_pool = op_state.will_create_pool();
+  bool create_pool = op_state.will_create_pools();
 
   if (create_pool)
     store->create_pools(pool_names, temp_codes);
@@ -187,8 +187,7 @@ int RGWZoneAdminOp::remove_pools(RGWRados *store, RGWZoneAdminOpState& op_state,
   return 0;
 }
 
-int RGWZoneAdminOp::list_pools(RGWRados *store, RGWZoneAdminOpState& op_state,
-                  RGWFormatterFlusher& flusher)
+int RGWZoneAdminOp::list_pools(RGWRados *store, RGWFormatterFlusher& flusher)
 {
   set<string> pools;
   int ret = store->list_placement_set(pools);
@@ -212,8 +211,7 @@ int RGWZoneAdminOp::list_pools(RGWRados *store, RGWZoneAdminOpState& op_state,
   return 0;
 }
 
-int RGWZoneAdminOp::list_garbage(RGWRados *store, RGWZoneAdminOpState& op_state,
-                  RGWFormatterFlusher& flusher)
+int RGWZoneAdminOp::list_garbage(RGWRados *store, RGWFormatterFlusher& flusher)
 {
   int ret;
   int index = 0;
@@ -271,12 +269,12 @@ int RGWZoneAdminOp::list_garbage(RGWRados *store, RGWZoneAdminOpState& op_state,
   return 0;
 }
 
-int RGWZoneAdminOp::process_garbage(RGWRados *store, RGWZoneAdminOpState& op_state)
+int RGWZoneAdminOp::process_garbage(RGWRados *store)
 {
   return store->process_gc();
 }
 
-int RGWZoneAdminOp::show_log(RGWRados *store, RGWZoneAdminOpState& op_state,
+int RGWZoneAdminOp::show_logs(RGWRados *store, RGWZoneAdminOpState& op_state,
                   RGWFormatterFlusher& flusher)
 {
   std::list<std::string> logs;

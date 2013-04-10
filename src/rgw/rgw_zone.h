@@ -14,6 +14,7 @@
 #include "common/Formatter.h"
 #include "rgw_formats.h"
 
+#include "include/str_list.h"
 
 using namespace std;
 
@@ -36,7 +37,7 @@ struct RGWZoneAdminOpState {
   bool show_log_sum;
   bool silent;
 
-  void set_create_pool() { create_pool = true; };
+  void set_create_pools() { create_pool = true; };
   void set_show_log_entries() { show_log_entries = true; };
   void set_skip_zero_entries() { skip_zero_entries = true; };
   void set_show_log_sum() { show_log_sum = true; };
@@ -66,6 +67,9 @@ struct RGWZoneAdminOpState {
   void add_pool_name(std::string& name) {
     if (!name.empty())
       pool_names.insert(name);
+  }
+  void set_pools(std::string& names) {
+    get_str_set(names, pool_names);
   }
   void clear_pool_list() { pool_names.clear(); };
 
@@ -97,7 +101,7 @@ struct RGWZoneAdminOpState {
   bool will_show_log_entries() { return show_log_entries; };
   bool will_skip_zero_entries() { return skip_zero_entries; };
   bool will_show_log_sum() { return show_log_sum; };
-  bool will_create_pool() { return create_pool; };
+  bool will_create_pools() { return create_pool; };
   bool is_silent() { return silent; };
 
   bool will_list_logs() {
@@ -124,15 +128,13 @@ public:
   static int remove_pools(RGWRados *store, RGWZoneAdminOpState& op_state,
                   RGWFormatterFlusher& flusher);
 
-  static int list_pools(RGWRados *store, RGWZoneAdminOpState& op_state,
-                  RGWFormatterFlusher& flusher);
+  static int list_pools(RGWRados *store, RGWFormatterFlusher& flusher);
 
-  static int list_garbage(RGWRados *store, RGWZoneAdminOpState& op_state,
-                  RGWFormatterFlusher& flusher);
+  static int list_garbage(RGWRados *store, RGWFormatterFlusher& flusher);
 
-  static int process_garbage(RGWRados *store, RGWZoneAdminOpState& op_state);
+  static int process_garbage(RGWRados *store);
 
-  static int show_log(RGWRados *store, RGWZoneAdminOpState& op_state,
+  static int show_logs(RGWRados *store, RGWZoneAdminOpState& op_state,
                   RGWFormatterFlusher& flusher);
 
   static int remove_log(RGWRados *store, RGWZoneAdminOpState& op_state);

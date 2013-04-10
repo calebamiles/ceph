@@ -1812,6 +1812,9 @@ static const char *nonsigned_subresources[] = {
   "index",
   "object",
   "policy",
+  "log",
+  "pool",
+  "garbage",
   NULL
 };
 
