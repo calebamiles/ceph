@@ -10,7 +10,6 @@
 
 using namespace std;
 
-
 #define RGW_PERM_READ            0x01
 #define RGW_PERM_WRITE           0x02
 #define RGW_PERM_READ_ACP        0x04
@@ -20,6 +19,7 @@ using namespace std;
 #define RGW_PERM_FULL_CONTROL    ( RGW_PERM_READ | RGW_PERM_WRITE | \
                                   RGW_PERM_READ_ACP | RGW_PERM_WRITE_ACP )
 #define RGW_PERM_ALL_S3          RGW_PERM_FULL_CONTROL
+#define RGW_PERM_UNDEFINED       0x30
 
 enum ACLGranteeTypeEnum {
 /* numbers are encoded, should not change */
