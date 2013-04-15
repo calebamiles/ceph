@@ -104,6 +104,7 @@ struct RGWBucketAdminOpState {
   std::string bucket_name;
   std::string bucket_id;
   std::string object_name;
+  std::string etag;
 
   bool list_buckets;
   bool stat_buckets;
@@ -111,30 +112,82 @@ struct RGWBucketAdminOpState {
   bool fix_index;
   bool delete_child_objects;
   bool bucket_stored;
+  bool match_etag;
+  bool check_modified;
+  bool fetch_data;
+
+  off_t ofs;
+  off_t end;
+  time_t *check_time;
+  time_t lastmod;
+
+  uint64_t read_len;
+  uint64_t obj_size;
+  uint64_t epoch;
 
   rgw_bucket bucket;
+  rgw_obj object;
   RGWUserBuckets buckets;
 
-  void set_fetch_stats(bool value) { stat_buckets = value; }
-  void set_check_objects(bool value) { check_objects = value; }
-  void set_fix_index(bool value) { fix_index = value; }
-  void set_delete_children(bool value) { delete_child_objects = value; }
+  bufferlist object_bl;
+  std::map<std::string, bufferlist> object_attrs;
+  std::list< std::pair<bufferlist, off_t> > object_data;
+
+  void *handle;
+
+  std::list< std::pair<bufferlist, off_t> >& get_object_data() {
+    return object_data;
+  }
+
+  void append_object_data(std::pair<bufferlist, off_t>& packet) {
+    object_data.push_back(packet);
+  }
+
+  void clear_object_data() { object_data.clear(); };
+
+  void set_obj_read_len(uint64_t size) { read_len = size; };
+  void set_obj_size(uint64_t size) { obj_size = size; };
+  void set_read_offset(off_t _ofs) {
+    if (_ofs >= 0)
+      ofs = _ofs;
+  }
+  void set_end_read_pos(off_t _end) {
+    if (_end >= 0)
+      end = _end;
+  }
+  void set_lastmod(time_t t) { lastmod = t; };
+  void set_epoch(uint64_t e) { epoch = e; };
+
+  off_t get_read_offset() { return ofs; };
+  off_t get_end_read_pos() { return end; };
+  time_t get_lastmod() { return lastmod; };
+  uint64_t get_epoch() { return epoch; };
+  size_t get_obj_size() { return obj_size; };
+
+  void set_fetch_stats(bool value) { stat_buckets = value; };
+  void set_check_objects(bool value) { check_objects = value; };
+  void set_fix_index(bool value) { fix_index = value; };
+  void set_delete_children(bool value) { delete_child_objects = value; };
+  void set_fetch_data(bool fetch) { fetch_data = fetch; };
 
   void set_user_id(std::string& user_id) {
     if (!user_id.empty())
       uid = user_id;
   }
   void set_bucket_name(std::string& bucket_str) {
-    bucket_name = bucket_str; 
+    if (!bucket_str.empty())
+      bucket_name = bucket_str;
   }
-  void set_object(std::string& object_str) {
-    object_name = object_str;
+  void set_object_name(std::string& object_str) {
+    if (!object_str.empty())
+      object_name = object_str;
   }
 
   std::string& get_user_id() { return uid; };
   std::string& get_user_display_name() { return display_name; };
   std::string& get_bucket_name() { return bucket_name; };
   std::string& get_object_name() { return object_name; };
+  std::string& get_etag() { return etag; };
 
   rgw_bucket& get_bucket() { return bucket; };
   void set_bucket(rgw_bucket& _bucket) {
@@ -145,6 +198,30 @@ struct RGWBucketAdminOpState {
   RGWUserBuckets& get_user_buckets() { return buckets; };
   void set_user_buckets(RGWUserBuckets& _buckets) { buckets = _buckets; };
 
+  rgw_obj& get_object() {
+    if (!object.key.empty())
+      return object;
+    else if (!object_name.empty() && bucket_stored)
+      object.init(bucket, object_name);
+
+    return object;
+  };
+
+  bufferlist& get_object_bl() { return object_bl; };
+  std::map<std::string, bufferlist>& get_object_attrs() { return object_attrs; };
+
+  void set_check_time(const char *mtime, bool modified) {
+    parse_time(mtime, check_time);
+    check_modified = modified;
+  }
+  void set_check_etag(std::string& tag, bool match) {
+    match_etag = match;
+    etag = tag;
+  }
+
+  time_t *get_check_time() { return check_time; };
+  time_t get_mod_time() { return lastmod; };
+
   bool will_fetch_stats() { return stat_buckets; };
   bool will_fix_index() { return fix_index; };
   bool will_delete_children() { return delete_child_objects; };
@@ -152,10 +229,19 @@ struct RGWBucketAdminOpState {
   bool is_user_op() { return !uid.empty(); };
   bool is_system_op() { return uid.empty(); }; 
   bool has_bucket_stored() { return bucket_stored; };
+  bool etag_must_match() { return (!etag.empty() && match_etag); };
+  bool etag_must_not_match() { return (!etag.empty() && !match_etag); };
+  bool will_check_modified() { return (check_time && check_modified); };
+  bool will_check_unmodified() { return (check_time && !check_modified); };
+  bool will_fetch_data() { return fetch_data; };
 
-  RGWBucketAdminOpState() : list_buckets(false), stat_buckets(false), check_objects(false), 
+  void **get_handle() { return &handle; };
+
+  RGWBucketAdminOpState() : list_buckets(false), stat_buckets(false), check_objects(false),
                             fix_index(false), delete_child_objects(false),
-                            bucket_stored(false)  {}
+                            bucket_stored(false), match_etag(false),
+                            check_modified(false), fetch_data(false),
+                            check_time(NULL), handle(NULL)  {}
 };
 
 /*
@@ -199,6 +285,13 @@ public:
   int remove_object(RGWBucketAdminOpState& op_state, std::string *err_msg = NULL);
   int get_policy(RGWBucketAdminOpState& op_state, ostream& o);
 
+  int get_object_head(RGWBucketAdminOpState& op_state);
+  int iterate_object(RGWBucketAdminOpState& op_state);
+  int stat_object(RGWBucketAdminOpState& op_state);
+  int read_object(RGWBucketAdminOpState& op_state);
+  int get_object_simple(RGWBucketAdminOpState& op_state);
+  int get_object(RGWBucketAdminOpState& op_state);
+
   void clear_failure() { failure = false; };
 };
 
@@ -218,6 +311,7 @@ public:
                   RGWFormatterFlusher& flusher);
 
   static int remove_bucket(RGWRados *store, RGWBucketAdminOpState& op_state);
+  static int get_object(RGWRados *store, RGWBucketAdminOpState& op_state);
   static int remove_object(RGWRados *store, RGWBucketAdminOpState& op_state);
   static int info(RGWRados *store, RGWBucketAdminOpState& op_state, RGWFormatterFlusher& flusher);
 };

@@ -963,7 +963,7 @@ int main(int argc, char **argv)
 
   /* populate bucket operation */
   bucket_op.set_bucket_name(bucket_name);
-  bucket_op.set_object(object);
+  bucket_op.set_object_name(object);
   bucket_op.set_check_objects(check_objects);
   bucket_op.set_delete_children(delete_child_objects);
 
