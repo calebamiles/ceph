@@ -200,7 +200,7 @@ class NameVal
 /** Stores the XML arguments associated with the HTTP request in req_state*/
 class XMLArgs
 {
-  string str, empty_str;
+  std::string str, empty_str, admin_sub_resource;
   map<string, string> val_map;
   map<string, string> sub_resources;
 
@@ -214,6 +214,15 @@ class XMLArgs
     sub_resources.clear();
     str = s;
   }
+
+  void set_admin_sub_resource(std::string& res) {
+    admin_sub_resource = res;
+  }
+
+  std::string& get_admin_sub_resource() {
+    return admin_sub_resource;
+  }
+
   /** parse the received arguments */
   int parse();
   /** Get the value for a specific argument parameter */

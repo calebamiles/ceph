@@ -430,7 +430,6 @@ int XMLArgs::parse()
 {
   int pos = 0, fpos;
   bool end = false;
-  bool admin_subresource_added = false; 
   if (str[pos] == '?') pos++;
 
   while (!end) {
@@ -479,9 +478,9 @@ int XMLArgs::parse()
           (name.compare("pool") == 0) ||
           (name.compare("garbage") == 0)) {
 
-        if (!admin_subresource_added) {
+        if (admin_sub_resource.empty()) {
           sub_resources[name] = "";
-          admin_subresource_added = true;
+          admin_sub_resource = name;
         }
       }
     }

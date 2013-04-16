@@ -545,6 +545,7 @@ int RGWBucket::remove_object(RGWBucketAdminOpState& op_state, std::string *err_m
   return 0;
 }
 
+
 int RGWBucket::get_object_head(RGWBucketAdminOpState& op_state)
 {
   int r;
@@ -587,7 +588,7 @@ int RGWBucket::get_object_head(RGWBucketAdminOpState& op_state)
 
   r = store->prepare_get_obj(store->ctx(), object, &ofs, &end, &attrs, mod_ptr,
           unmod_ptr, &lastmod, if_match, if_nomatch, &read_len,
-          &obj_size, &handle, NULL);
+          &obj_size, NULL, &handle, NULL);
 
   if (r < 0) {
     store->finish_get_obj(&handle);
@@ -651,48 +652,6 @@ int RGWBucket::iterate_object(RGWBucketAdminOpState& op_state)
   return ret;
 }
 
-int RGWBucket::stat_object(RGWBucketAdminOpState& op_state)
-{
-  uint64_t size;
-  time_t mtime;
-  uint64_t epoch;
-
-
-  std::map<std::string, bufferlist> attrs = op_state.get_object_attrs();
-  rgw_obj object = op_state.get_object();
-
-
-  int ret = store->obj_stat(store->ctx(), object, &size, &mtime, &epoch, &attrs, NULL);
-  if (ret < 0)
-    return ret;
-
-  op_state.set_obj_size(size);
-  op_state.set_lastmod(mtime);
-  op_state.set_epoch(epoch);
-
-  return 0;
-}
-
-int RGWBucket::read_object(RGWBucketAdminOpState& op_state)
-{
-  rgw_obj object = op_state.get_object();
-  bufferlist bl = op_state.get_object_bl();
-
-  off_t ofs = op_state.get_read_offset();
-  size_t size = op_state.get_obj_size();
-
-  return store->read(store->ctx(), object, ofs, size, bl);
-}
-
-int RGWBucket::get_object_simple(RGWBucketAdminOpState& op_state)
-{
-  int ret = stat_object(op_state);
-  if (ret < 0)
-    return ret;
-
-  return read_object(op_state);
-}
-
 int RGWBucket::get_object(RGWBucketAdminOpState& op_state)
 {
   int ret = get_object_head(op_state);
@@ -739,7 +698,6 @@ static void dump_index_check(map<RGWObjCategory, RGWBucketStats> existing_stats,
   dump_bucket_usage(calculated_stats, formatter);
   formatter->close_section();
   formatter->close_section();
-  formatter->flush(cout);
 }
 
 int RGWBucket::check_bad_index_multipart(RGWBucketAdminOpState& op_state,

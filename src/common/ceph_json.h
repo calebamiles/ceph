@@ -4,10 +4,10 @@
 #include <iostream>
 #include <include/types.h>
 #include <list>
+#include <errno.h>
 
 #include "json_spirit/json_spirit.h"
 #include "Formatter.h"
-
 
 using namespace json_spirit;
 
@@ -314,6 +314,65 @@ void encode_json_map(const char *name, const char *index_name, const char *value
                      const map<K, V>& m, Formatter *f)
 {
   encode_json_map<K, V>(name, index_name, NULL, value_name, NULL, NULL, m, f);
+}
+
+static int read_input(const string& infile, bufferlist& bl)
+{
+  int fd = 0;
+  if (infile.size()) {
+    fd = open(infile.c_str(), O_RDONLY);
+    if (fd < 0) {
+      int err = -errno;
+      throw JSONDecoder::err("error reading input file " + infile);
+      return err;
+    }
+  }
+
+#define READ_CHUNK 8196
+  int r;
+
+  do {
+    char buf[READ_CHUNK];
+
+    r = read(fd, buf, READ_CHUNK);
+    if (r < 0) {
+      int err = -errno;
+      throw JSONDecoder::err("error while reading input");
+      return err;
+    }
+    bl.append(buf, r);
+  } while (r > 0);
+
+  if (infile.size()) {
+    close(fd);
+  }
+
+  return 0;
+}
+
+template <class T>
+int read_decode_json(const string& infile, T& t)
+{
+  bufferlist bl;
+  int ret = read_input(infile, bl);
+  if (ret < 0) {
+    // error code has already been thrown
+    return ret;
+  }
+  JSONParser p;
+  ret = p.parse(bl.c_str(), bl.length());
+  if (ret < 0) {
+      throw JSONDecoder::err("failed to parse JSON");
+    return ret;
+  }
+
+  try {
+    t.decode_json(&p);
+  } catch (JSONDecoder::err& e) {
+    throw e;
+    return -EINVAL;
+  }
+  return 0;
 }
 
 #endif

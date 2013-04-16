@@ -200,6 +200,7 @@ struct RGWUserAdminOpState {
     if (name.empty())
       return;
 
+    display_name = name;
   }
   void set_subuser(std::string& _subuser) {
     if (_subuser.empty())
@@ -262,7 +263,7 @@ struct RGWUserAdminOpState {
   bool has_caps_op() { return caps_specified; };
   bool has_suspension_op() { return suspension_op; };
   bool has_subuser_perm() { return perm_specified; };
-  bool will_gen_access() { return (id.empty() && subuser.empty()); };
+  bool will_gen_access() { return (id.empty() && !subuser.empty()); };
   bool will_gen_secret() { return key.empty(); };
   bool will_gen_subuser() { return gen_subuser; };
   bool will_purge_keys() { return purge_keys; };

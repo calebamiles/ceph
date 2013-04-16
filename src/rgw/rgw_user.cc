@@ -654,14 +654,6 @@ int RGWAccessKeyPool::check_op(RGWUserAdminOpState& op_state,
   std::string access_key = op_state.get_access_key();
   std::string secret_key = op_state.get_secret_key();
 
-  /* see if the access key or secret key was specified */
-  if (!op_state.will_gen_access() && access_key.empty()) {
-    set_err_msg(err_msg, "empty access key");
-    return -EINVAL;
-  }
-
-  // don't check for secret key because we may be doing a removal
-
   check_existing_key(op_state);
 
   // if a key type wasn't specified set it to s3
@@ -699,19 +691,21 @@ int RGWAccessKeyPool::generate_key(RGWUserAdminOpState& op_state, std::string *e
 
   if (!gen_access) {
     id = op_state.get_access_key();
-    if (id.empty())
+    if (id.empty()) {
+      set_err_msg(err_msg, "empty access key");
       return -EINVAL;
+    }
 
     switch (key_type) {
     case KEY_TYPE_SWIFT:
       if (rgw_get_user_info_by_swift(store, id, duplicate_check) >= 0) {
-	set_err_msg(err_msg, "existing swift key in RGW system:" + id);
-	return -EEXIST;
+        set_err_msg(err_msg, "existing swift key in RGW system:" + id);
+        return -EEXIST;
       }
-    case KEY_TYPE_S3:
+     case KEY_TYPE_S3:
       if (rgw_get_user_info_by_access_key(store, id, duplicate_check) >= 0) {
-	set_err_msg(err_msg, "existing S3 key in RGW system:" + id);
-	return -EEXIST;
+        set_err_msg(err_msg, "existing S3 key in RGW system:" + id);
+        return -EEXIST;
       }
     }
   }
@@ -721,8 +715,10 @@ int RGWAccessKeyPool::generate_key(RGWUserAdminOpState& op_state, std::string *e
 
   if (!gen_secret) {
     key = op_state.get_secret_key();
-    if (key.empty())
+    if (key.empty()) {
+      set_err_msg(err_msg, "empty secret key");
       return -EINVAL;
+    }
 
   } else if (gen_secret) {
     char secret_key_buf[SECRET_KEY_LEN + 1];
@@ -877,15 +873,19 @@ int RGWAccessKeyPool::execute_add(RGWUserAdminOpState& op_state,
     break;
   }
 
-  if (ret < 0)
+  if (ret < 0) {
+    set_err_msg(err_msg, cpp_strerror(-ret));
     return ret;
+  }
 
   // store the updated info
   if (!defer_user_update)
     ret = user->update(op_state, err_msg);
 
-  if (ret < 0)
+  if (ret < 0) {
+    set_err_msg(err_msg, "unable to update user");
     return ret;
+  }
 
   return 0;
 }

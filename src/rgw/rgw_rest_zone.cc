@@ -1,5 +1,5 @@
 #include "rgw_op.h"
-#include "rgw_user.h"
+#include "rgw_zone.h"
 #include "rgw_rest_zone.h"
 
 #include "include/str_list.h"
@@ -22,7 +22,7 @@ public:
 
 void RGWOp_Zone_Info::execute()
 {
-  http_ret = RGWZoneAdminOp::info(store, flusher);
+  http_ret = RGWZoneAdminOp::zone_info(store, flusher);
 }
 
 class RGWOp_Add_Pools : public RGWRESTOp {
@@ -156,6 +156,10 @@ public:
 
 void RGWOp_Show_Logs::execute()
 {
+  bool show_log_entries;
+  bool show_log_sum;
+  bool skip_zero_entries; 
+
   std::string object;
   std::string date;
   std::string bucket_id;
@@ -163,15 +167,23 @@ void RGWOp_Show_Logs::execute()
 
   RGWZoneAdminOpState op_state;
 
-  RESTArgs::get_string(s, "object" object, &object);
-  RESTArgs::get_string(s, "date" date, &date);
+  RESTArgs::get_string(s, "object", object, &object);
+  RESTArgs::get_string(s, "date", date, &date);
   RESTArgs::get_string(s, "bucket_id", bucket_id, &bucket_id);
-  RESTArgs::get_string(s, "bucket_name" bucket_name, &bucket_name);
+  RESTArgs::get_string(s, "bucket_name", bucket_name, &bucket_name);
+  RESTArgs::get_bool(s, "show_log_entries", true, &show_log_entries);
+  RESTArgs::get_bool(s, "show_log_sum", true, &show_log_sum);
+  RESTArgs::get_bool(s, "skip_zero_entries", false, &skip_zero_entries);
+
 
   op_state.set_object(object);
   op_state.set_date(date);
   op_state.set_bucket_id(bucket_id);
   op_state.set_bucket_name(bucket_name);
+  op_state.set_show_log_entries(show_log_entries);
+  op_state.set_show_log_sum(show_log_sum);
+  op_state.set_skip_zero_entries(skip_zero_entries);
+
 
   http_ret = RGWZoneAdminOp::show_logs(store, op_state, flusher);
 }
@@ -199,42 +211,42 @@ void RGWOp_Remove_Logs::execute()
 
   RGWZoneAdminOpState op_state;
 
-  RESTArgs::get_string(s, "object" object, &object);
-  RESTArgs::get_string(s, "date" date, &date);
+  RESTArgs::get_string(s, "object", object, &object);
+  RESTArgs::get_string(s, "date", date, &date);
   RESTArgs::get_string(s, "bucket_id", bucket_id, &bucket_id);
-  RESTArgs::get_string(s, "bucket_name" bucket_name, &bucket_name);
+  RESTArgs::get_string(s, "bucket_name", bucket_name, &bucket_name);
 
   op_state.set_object(object);
   op_state.set_date(date);
   op_state.set_bucket_id(bucket_id);
   op_state.set_bucket_name(bucket_name);
 
-  http_ret = RGWZoneAdminOp::remove_logs(store, op_state);
+  http_ret = RGWZoneAdminOp::remove_log(store, op_state);
 }
 
-RGWOp *RGWHandler_User::op_get()
+RGWOp *RGWHandler_Zone::op_get()
 {
-  if (s->args.sub_resource_exists("pool")
+  if (s->args.sub_resource_exists("pool"))
     return new RGWOp_List_Pools;
 
-  if (s->args.sub_resource_exists("log")
+  if (s->args.sub_resource_exists("log"))
     return new RGWOp_Show_Logs;
 
-  if (s->args.sub_resource_exists("garbage")
+  if (s->args.sub_resource_exists("garbage"))
     return new RGWOp_List_Garbage;
 
   return new RGWOp_Zone_Info;
 };
 
-RGWOp *RGWHandler_User::op_put()
+RGWOp *RGWHandler_Zone::op_put()
 {
-  if (s->args.sub_resource_exists("pool")
+  if (s->args.sub_resource_exists("pool"))
     return new RGWOp_Add_Pools;
 
   return NULL;
 };
 
-RGWOp *RGWHandler_User::op_delete()
+RGWOp *RGWHandler_Zone::op_delete()
 {
   if (s->args.sub_resource_exists("pool"))
     return new RGWOp_Remove_Pools;

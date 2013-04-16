@@ -11,7 +11,7 @@ protected:
   RGWOp *op_put();
   RGWOp *op_delete();
 public:
-  RGWHandler_User() {}
+  RGWHandler_Zone() {}
   virtual ~RGWHandler_Zone() {}
 
   int read_permissions(RGWOp*) {

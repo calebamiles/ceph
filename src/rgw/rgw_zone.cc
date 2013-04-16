@@ -18,65 +18,6 @@
 
 using namespace std;
 
-static int read_input(const string& infile, bufferlist& bl)
-{
-  int fd = 0;
-  if (infile.size()) {
-    fd = open(infile.c_str(), O_RDONLY);
-    if (fd < 0) {
-      int err = -errno;
-      dout(0) << "error reading input file " << infile << dendl;
-      return err;
-    }
-  }
-
-#define READ_CHUNK 8196
-  int r;
-
-  do {
-    char buf[READ_CHUNK];
-
-    r = read(fd, buf, READ_CHUNK);
-    if (r < 0) {
-      int err = -errno;
-      dout(0) << "error while reading input" << dendl;
-      return err;
-    }
-    bl.append(buf, r);
-  } while (r > 0);
-
-  if (infile.size()) {
-    close(fd);
-  }
-
-  return 0;
-}
-
-template <class T>
-static int read_decode_json(const string& infile, T& t)
-{
-  bufferlist bl;
-  int ret = read_input(infile, bl);
-  if (ret < 0) {
-    dout(0) << "ERROR: failed to read input: " << cpp_strerror(-ret) << dendl;
-    return ret;
-  }
-  JSONParser p;
-  ret = p.parse(bl.c_str(), bl.length());
-  if (ret < 0) {
-    cout << "failed to parse JSON" << std::endl;
-    return ret;
-  }
-
-  try {
-    t.decode_json(&p);
-  } catch (JSONDecoder::err& e) {
-    dout(0) << "failed to decode JSON input: " << e.message << dendl;
-    return -EINVAL;
-  }
-  return 0;
-}
-
 int RGWZoneAdminOp::zone_info(RGWRados *store,RGWFormatterFlusher& flusher)
 {
   Formatter *formatter = flusher.get_formatter();
@@ -91,23 +32,33 @@ int RGWZoneAdminOp::zone_info(RGWRados *store,RGWFormatterFlusher& flusher)
 int RGWZoneAdminOp::zone_set(RGWRados *store, RGWZoneAdminOpState& op_state,
                   RGWFormatterFlusher& flusher)
 {
+  RGWRegion region;
   RGWZoneParams zone;
-  zone.init_default();
 
-  std::string infile = op_state.get_infile();
-
-  int ret = read_decode_json(infile, zone);
+  int ret = region.init(g_ceph_context, store);
   if (ret < 0) {
-    return ret;
+    ldout(store->ctx(), 0) << "WARNING: failed to initialize region" << dendl;
   }
 
-  ret = zone.store_info(g_ceph_context, store);
+  zone.init_default();
+  std::string infile = op_state.get_infile();
+
+  ret = read_decode_json(infile, zone);
+  if (ret < 0)
+    return ret;
+
+  ret = read_decode_json(infile, zone);
+  if (ret < 0)
+    return ret;
+
+  ret = zone.store_info(g_ceph_context, store, region);
   if (ret < 0)
     return ret;
 
   Formatter *formatter = flusher.get_formatter();
   flusher.start(0);
-  zone.dump(formatter);
+
+  encode_json("zone", zone, formatter);
   flusher.flush();
 
   return 0;
@@ -309,20 +260,20 @@ int RGWZoneAdminOp::show_logs(RGWRados *store, RGWZoneAdminOpState& op_state,
     }
   } else {
     std::string log_object = op_state.get_log_object();
+    if (log_object.empty())
+      return -EINVAL;
+
     int r = store->log_show_init(log_object, &h);
     if (r < 0)
-      return -r;
-
-    struct rgw_log_entry entry;
-
-    // peek at first entry to get bucket metadata
-    r = store->log_show_next(h, &entry);
-    if (r < 0)
-      return -r;
-
-    entries.push_back(entry);
+      return r;
 
     do {
+      struct rgw_log_entry entry;
+
+      r = store->log_show_next(h, &entry);
+      if (r < 0)
+        return r;
+
       uint64_t total_time =  entry.total_time.sec() * 1000000LL * entry.total_time.usec();
 
       agg_time += total_time;
@@ -330,14 +281,8 @@ int RGWZoneAdminOp::show_logs(RGWRados *store, RGWZoneAdminOpState& op_state,
       agg_bytes_received += entry.bytes_received;
       total_entries++;
 
-      r = store->log_show_next(h, &entry);
-
-      // entry will have been updated by log_show_next
       entries.push_back(entry);
     } while (r > 0);
-
-    if (r < 0)
-      return r;
   }
 
   // either list the log objects or dump a log entry
@@ -358,7 +303,6 @@ int RGWZoneAdminOp::show_logs(RGWRados *store, RGWZoneAdminOpState& op_state,
     std::list<rgw_log_entry>::iterator entries_iter = entries.begin();
     formatter->open_object_section("log");
 
-    // peek at first entry to get bucket metadata
     formatter->dump_string("bucket_id", entries_iter->bucket_id);
     formatter->dump_string("bucket_owner", entries_iter->bucket_owner);
     formatter->dump_string("bucket", entries_iter->bucket);
@@ -366,21 +310,20 @@ int RGWZoneAdminOp::show_logs(RGWRados *store, RGWZoneAdminOpState& op_state,
     if (show_log_entries) {
       formatter->open_array_section("log_entries");
 
-     while (entries_iter != entries.end()) {
-       entries_iter++;
-       if (entries_iter == entries.end())
-         break;
+      while (entries_iter != entries.end()) {
+        entries_iter++;
+        if (entries_iter == entries.end())
+          break;
 
-      rgw_log_entry entry = *entries_iter;
+        rgw_log_entry entry = *entries_iter;
 
-       if (skip_zero_entries && entry.bytes_sent == 0 &&
-               entry.bytes_received == 0) {
+        if (skip_zero_entries && entry.bytes_sent == 0 &&
+                entry.bytes_received == 0) {
           continue;
-       }
+        }
 
         rgw_format_ops_log_entry(entry, formatter);
         flusher.flush();
-
       }
 
       formatter->close_section();

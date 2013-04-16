@@ -417,6 +417,52 @@ static void dump_bucket_usage(map<RGWObjCategory, RGWBucketStats>& stats, Format
   formatter->close_section();
 }
 
+static int parse_date_str(const string& date_str, utime_t& ut)
+{
+  uint64_t epoch = 0;
+
+  if (!date_str.empty()) {
+    int ret = parse_date(date_str, &epoch);
+    if (ret < 0) {
+      cerr << "ERROR: failed to parse date: " << date_str << std::endl;
+      return -EINVAL;
+    }
+  }
+
+  ut = utime_t(epoch, 0);
+
+  return 0;
+}
+
+template <class T>
+static bool decode_dump(const char *field_name, bufferlist& bl, Formatter *f)
+{
+  T t;
+
+  bufferlist::iterator iter = bl.begin();
+
+  try {
+    ::decode(t, iter);
+  } catch (buffer::error& err) {
+    return false;
+  }
+
+  encode_json(field_name, t, f);
+
+  return true;
+}
+
+static bool dump_string(const char *field_name, bufferlist& bl, Formatter *f)
+{
+  string val;
+  if (bl.length() > 0) {
+    val.assign(bl.c_str(), bl.length());
+  }
+  f->dump_string(field_name, val);
+
+  return true;
+}
+
 int bucket_stats(rgw_bucket& bucket, Formatter *formatter)
 {
   RGWBucketInfo bucket_info;
@@ -425,7 +471,8 @@ int bucket_stats(rgw_bucket& bucket, Formatter *formatter)
     return r;
 
   map<RGWObjCategory, RGWBucketStats> stats;
-  int ret = store->get_bucket_stats(bucket, stats);
+  uint64_t bucket_ver, master_ver;
+  int ret = store->get_bucket_stats(bucket, &bucket_ver, &master_ver, stats);
   if (ret < 0) {
     cerr << "error getting bucket stats ret=" << ret << std::endl;
     return ret;
@@ -965,14 +1012,9 @@ int main(int argc, char **argv)
   bucket_op.set_delete_children(delete_child_objects);
 
   /* populate zone operation */
-  if (show_log_entries)
-    zone_op.set_show_log_entries();
-
-  if (show_log_sum)
-    zone_op.set_show_log_sum();
-
-  if (skip_zero_entries)
-    zone_op.set_skip_zero_entries();
+  zone_op.set_show_log_entries(show_log_entries);
+  zone_op.set_show_log_sum(show_log_sum);
+  zone_op.set_skip_zero_entries(skip_zero_entries);
 
   if (!bucket_name.empty())
     zone_op.set_bucket_name(bucket_name);
