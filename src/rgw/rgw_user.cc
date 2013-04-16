@@ -699,19 +699,19 @@ int RGWAccessKeyPool::generate_key(RGWUserAdminOpState& op_state, std::string *e
 
   if (!gen_access) {
     id = op_state.get_access_key();
-  }
+    if (id.empty())
+      return -EINVAL;
 
-  if (!id.empty()) {
     switch (key_type) {
     case KEY_TYPE_SWIFT:
       if (rgw_get_user_info_by_swift(store, id, duplicate_check) >= 0) {
-        set_err_msg(err_msg, "existing swift key in RGW system:" + id);
-        return -EEXIST;
+	set_err_msg(err_msg, "existing swift key in RGW system:" + id);
+	return -EEXIST;
       }
     case KEY_TYPE_S3:
       if (rgw_get_user_info_by_access_key(store, id, duplicate_check) >= 0) {
-        set_err_msg(err_msg, "existing S3 key in RGW system:" + id);
-        return -EEXIST;
+	set_err_msg(err_msg, "existing S3 key in RGW system:" + id);
+	return -EEXIST;
       }
     }
   }
@@ -721,6 +721,9 @@ int RGWAccessKeyPool::generate_key(RGWUserAdminOpState& op_state, std::string *e
 
   if (!gen_secret) {
     key = op_state.get_secret_key();
+    if (key.empty())
+      return -EINVAL;
+
   } else if (gen_secret) {
     char secret_key_buf[SECRET_KEY_LEN + 1];
 
@@ -1815,11 +1818,7 @@ int RGWUser::execute_modify(RGWUserAdminOpState& op_state, std::string *err_msg)
 
   // will be set to RGW_DEFAULT_MAX_BUCKETS by default
   uint32_t max_buckets = op_state.get_max_buckets();
-
-  ldout(store->ctx(), 0) << "max_buckets=" << max_buckets << " specified=" << op_state.max_buckets_specified << dendl;
-
-  if (op_state.max_buckets_specified)
-    user_info.max_buckets = max_buckets;
+  user_info.max_buckets = max_buckets;
 
   if (op_state.has_suspension_op()) {
     __u8 suspended = op_state.get_suspension_status();

@@ -155,18 +155,9 @@ struct RGWUserAdminOpState {
   bool existing_key;
   bool existing_subuser;
   bool existing_email;
-  bool subuser_specified;
-  bool gen_secret;
-  bool gen_access;
   bool gen_subuser;
-  bool id_specified;
-  bool key_specified;
-  bool type_specified;
   bool purge_data;
   bool purge_keys;
-  bool display_name_specified;
-  bool user_email_specified;
-  bool max_buckets_specified;
   bool perm_specified;
   bool caps_specified;
   bool suspension_op;
@@ -184,8 +175,6 @@ struct RGWUserAdminOpState {
       return;
 
     id = access_key;
-    id_specified = true;
-    gen_access = false;
     key_op = true;
   }
   void set_secret_key(std::string& secret_key) {
@@ -193,8 +182,6 @@ struct RGWUserAdminOpState {
       return;
 
     key = secret_key;
-    key_specified = true;
-    gen_secret = false;
     key_op = true;
   }
   void set_user_id(std::string& id) {
@@ -208,14 +195,11 @@ struct RGWUserAdminOpState {
       return;
 
     user_email = email;
-    user_email_specified = true;
   }
   void set_display_name(std::string& name) {
     if (name.empty())
       return;
 
-    display_name = name;
-    display_name_specified = true;
   }
   void set_subuser(std::string& _subuser) {
     if (_subuser.empty())
@@ -230,8 +214,6 @@ struct RGWUserAdminOpState {
       subuser = _subuser;
     }
 
-    subuser_specified = true;
-    gen_access = true;
   }
   void set_caps(std::string& _caps) {
     if (_caps.empty())
@@ -246,7 +228,6 @@ struct RGWUserAdminOpState {
   }
   void set_key_type(int32_t type) {
     key_type = type;
-    type_specified = true;
   }
   void set_suspension(__u8 is_suspended) {
     suspended = is_suspended;
@@ -258,26 +239,12 @@ struct RGWUserAdminOpState {
   }
   void set_max_buckets(uint32_t mb) {
     max_buckets = mb;
-    max_buckets_specified = true;
   }
-  void set_gen_access() {
-    gen_access = true;
-    key_op = true;
-  }
-  void set_gen_secret() {
-    gen_secret = true;
-    key_op = true;
-  }
-  void set_generate_key() {
-    if (id.empty())
-      gen_access = true;
-    if (key.empty())
-      gen_secret = true;
-    key_op = true;
+  void set_generate_key(bool gen_key) {
+    key_op = (gen_key || !key.empty() || !id.empty());
   }
   void clear_generate_key() {
-    gen_access = false;
-    gen_secret = false;
+    key_op = false;
   }
   void set_purge_keys() {
     purge_keys = true;
@@ -290,13 +257,13 @@ struct RGWUserAdminOpState {
   bool has_existing_key() { return existing_key; };
   bool has_existing_subuser() { return existing_subuser; };
   bool has_existing_email() { return existing_email; };
-  bool has_subuser() { return subuser_specified; };
+  bool has_subuser() { return !subuser.empty(); };
   bool has_key_op() { return key_op; };
   bool has_caps_op() { return caps_specified; };
   bool has_suspension_op() { return suspension_op; };
   bool has_subuser_perm() { return perm_specified; };
-  bool will_gen_access() { return gen_access; };
-  bool will_gen_secret() { return gen_secret; };
+  bool will_gen_access() { return (id.empty() && subuser.empty()); };
+  bool will_gen_secret() { return key.empty(); };
   bool will_gen_subuser() { return gen_subuser; };
   bool will_purge_keys() { return purge_keys; };
   bool will_purge_data() { return purge_data; };
@@ -376,19 +343,10 @@ struct RGWUserAdminOpState {
     existing_key = false;
     existing_subuser = false;
     existing_email = false;
-    subuser_specified = false;
     caps_specified = false;
     purge_keys = false;
-    gen_secret = false;
-    gen_access = false;
     gen_subuser = false;
-    id_specified = false;
-    key_specified = false;
-    type_specified = false;
     purge_data = false;
-    display_name_specified = false;
-    user_email_specified = false;
-    max_buckets_specified = false;
     perm_specified = false;
     suspension_op = false;
     key_op = false;
