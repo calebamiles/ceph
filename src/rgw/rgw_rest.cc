@@ -230,28 +230,38 @@ void dump_errno(struct req_state *s, int err)
 
 void dump_content_length(struct req_state *s, uint64_t len)
 {
+  RGWRESTFlusher flusher(s);
+  dump_content_length(flusher, len);
+}
+
+void dump_content_length(RGWFormatterFlusher& flusher, uint64_t len)
+{
+  Formatter *f = flusher.get_formatter();
   char buf[21];
   snprintf(buf, sizeof(buf), "%"PRIu64, len);
-  int r = s->cio->print("Content-Length: %s\n", buf);
-  if (r < 0) {
-    ldout(s->cct, 0) << "ERROR: s->cio->print() returned err=" << r << dendl;
-  }
-  r = s->cio->print("Accept-Ranges: %s\n", "bytes");
-  if (r < 0) {
-    ldout(s->cct, 0) << "ERROR: s->cio->print() returned err=" << r << dendl;
-  }
+  f->dump_string("Content-Length", buf);
+  f->dump_string("Accept-Ranges", "bytes");
+  flusher.flush();
 }
 
 void dump_etag(struct req_state *s, const char *etag)
 {
-  int r;
-  if (s->prot_flags & RGW_REST_SWIFT)
-    r = s->cio->print("etag: %s\n", etag);
+  bool swift = s->prot_flags & RGW_REST_SWIFT;
+  RGWRESTFlusher flusher(s);
+  dump_etag(flusher, etag, swift);
+}
+
+void dump_etag(RGWFormatterFlusher& flusher, const char *etag, bool swift)
+{
+  Formatter *f = flusher.get_formatter();
+  std::string etag_str = "\"";
+  etag_str.append(etag);
+  etag_str.append("\"");
+
+  if (swift)
+    f->dump_string("etag", etag_str.c_str());
   else
-    r = s->cio->print("ETag: \"%s\"\n", etag);
-  if (r < 0) {
-    ldout(s->cct, 0) << "ERROR: s->cio->print() returned err=" << r << dendl;
-  }
+    f->dump_string("ETag", etag_str.c_str());
 }
 
 void dump_pair(struct req_state *s, const char *key, const char *value)
@@ -304,7 +314,13 @@ void dump_redirect(struct req_state *s, const string& redirect)
 
 void dump_last_modified(struct req_state *s, time_t t)
 {
+  RGWRESTFlusher flusher(s);
+  dump_last_modified(flusher, t);
+}
 
+void dump_last_modified(RGWFormatterFlusher& flusher, time_t t)
+{
+  Formatter *f = flusher.get_formatter();
   char timestr[TIME_BUF_SIZE];
   struct tm result;
   struct tm *tmp = gmtime_r(&t, &result);
@@ -314,10 +330,8 @@ void dump_last_modified(struct req_state *s, time_t t)
   if (strftime(timestr, sizeof(timestr), "%a, %d %b %Y %H:%M:%S %Z", tmp) == 0)
     return;
 
-  int r = s->cio->print("Last-Modified: %s\n", timestr);
-  if (r < 0) {
-    ldout(s->cct, 0) << "ERROR: s->cio->print() returned err=" << r << dendl;
-  }
+  f->dump_string("Last-Modified", timestr);
+  flusher.flush();
 }
 
 void dump_time(struct req_state *s, const char *name, time_t *t)
@@ -444,6 +458,19 @@ void dump_range(struct req_state *s, uint64_t ofs, uint64_t end, uint64_t total)
     ldout(s->cct, 0) << "ERROR: s->cio->print() returned err=" << r << dendl;
   }
 }
+
+void dump_range(RGWFormatterFlusher& flusher, uint64_t ofs, uint64_t end, uint64_t total)
+{
+  char range_buf[128];
+  Formatter *f = flusher.get_formatter();
+
+  /* dumping range into temp buffer first, as libfcgi will fail to digest %lld */
+  snprintf(range_buf, sizeof(range_buf), "%lld-%lld/%lld", (long long)ofs, (long long)end, (long long)total);
+
+  f->dump_string("Content-Range: bytes", range_buf);
+  flusher.flush();
+}
+
 
 int RGWGetObj_ObjStore::get_params()
 {
