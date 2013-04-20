@@ -53,21 +53,6 @@ void rgw_get_errno_s3(rgw_html_errors *e , int err_no)
   }
 }
 
-struct response_attr_param {
-  const char *param;
-  const char *http_attr;
-};
-
-static struct response_attr_param resp_attr_params[] = {
-  {"response-content-type", "Content-Type"},
-  {"response-content-language", "Content-Language"},
-  {"response-expires", "Expires"},
-  {"response-cache-control", "Cache-Control"},
-  {"response-content-disposition", "Content-Disposition"},
-  {"response-content-encoding", "Content-Encoding"},
-  {NULL, NULL},
-};
-
 int RGWGetObj_ObjStore_S3::send_response_data(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 {
   const char *content_type = NULL;
@@ -97,7 +82,7 @@ int RGWGetObj_ObjStore_S3::send_response_data(bufferlist& bl, off_t bl_ofs, off_
       }
     }
 
-    for (struct response_attr_param *p = resp_attr_params; p->param; p++) {
+    for (const struct response_attr_param *p = rgw_resp_attr_params; p->param; p++) {
       bool exists;
       string val = s->args.get(p->param, &exists);
       if (exists) {

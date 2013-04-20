@@ -5,6 +5,20 @@
 #include "rgw_op.h"
 #include "rgw_formats.h"
 
+struct response_attr_param {
+  const char *param;
+  const char *http_attr;
+};
+
+const struct response_attr_param rgw_resp_attr_params[] = {
+  {"response-content-type", "Content-Type"},
+  {"response-content-language", "Content-Language"},
+  {"response-expires", "Expires"},
+  {"response-cache-control", "Cache-Control"},
+  {"response-content-disposition", "Content-Disposition"},
+  {"response-content-encoding", "Content-Encoding"},
+  {NULL, NULL},
+};
 
 extern std::map<std::string, std::string> rgw_to_http_attrs;
 
