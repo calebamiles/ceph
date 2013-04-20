@@ -104,7 +104,7 @@ struct RGWBucketAdminOpState {
   std::string bucket_name;
   std::string bucket_id;
   std::string object_name;
-  std::string etag;
+  const char *etag;
 
   bool list_buckets;
   bool stat_buckets;
@@ -113,8 +113,10 @@ struct RGWBucketAdminOpState {
   bool delete_child_objects;
   bool bucket_stored;
   bool match_etag;
-  bool check_modified;
+  bool check_unmodified;
   bool fetch_data;
+  bool valid_byte_range;
+  bool partial_content; // so we don't try and dereference a null pointer
 
   off_t ofs;
   off_t end;
@@ -123,6 +125,7 @@ struct RGWBucketAdminOpState {
 
   uint64_t read_len;
   uint64_t obj_size;
+  uint64_t object_data_length;
   uint64_t epoch;
 
   rgw_bucket bucket;
@@ -131,11 +134,34 @@ struct RGWBucketAdminOpState {
 
   bufferlist object_bl;
   std::map<std::string, bufferlist> object_attrs;
+  std::map<std::string, std::string> response_attrs_params;
   std::list< std::pair<bufferlist, off_t> > object_data;
 
   void *handle;
 
-  std::list< std::pair<bufferlist, off_t> >& get_object_data() {
+  bufferlist& get_object_data() {
+    if (object_bl.length() > 0) {
+      return object_bl;
+    } else if (!object_data.empty()) {
+      std::list< std::pair<bufferlist, off_t> >::iterator packet_it;
+      packet_it = object_data.begin();
+      object_data_length = 0;
+      object_bl.clear();
+
+      for (; packet_it != object_data.end(); ++packet_it) {
+        std::pair<bufferlist, off_t> packet = *packet_it;
+        bufferlist packet_data = packet.first;
+        off_t data_len = packet.second;
+
+        object_bl.append(packet_data.c_str(), data_len);
+        object_data_length += data_len;
+      }
+    }
+
+    return object_bl;
+  }
+
+  std::list< std::pair<bufferlist, off_t> >& get_raw_object_data() {
     return object_data;
   }
 
@@ -143,7 +169,15 @@ struct RGWBucketAdminOpState {
     object_data.push_back(packet);
   }
 
-  void clear_object_data() { object_data.clear(); };
+  void clear_object_data() {
+    object_bl.zero();
+    object_data.clear();
+    object_data_length = 0;
+  }
+
+  std::map<std::string, std::string>& get_response_attr_params() {
+    return response_attrs_params;
+  }
 
   void set_obj_read_len(uint64_t size) { read_len = size; };
   void set_obj_size(uint64_t size) { obj_size = size; };
@@ -160,8 +194,10 @@ struct RGWBucketAdminOpState {
 
   off_t get_read_offset() { return ofs; };
   off_t get_end_read_pos() { return end; };
+  off_t get_object_data_length() { return object_data_length; }
   time_t get_lastmod() { return lastmod; };
   uint64_t get_epoch() { return epoch; };
+  uint64_t get_read_len() { return read_len; };
   size_t get_obj_size() { return obj_size; };
 
   void set_fetch_stats(bool value) { stat_buckets = value; };
@@ -187,7 +223,7 @@ struct RGWBucketAdminOpState {
   std::string& get_user_display_name() { return display_name; };
   std::string& get_bucket_name() { return bucket_name; };
   std::string& get_object_name() { return object_name; };
-  std::string& get_etag() { return etag; };
+  const char *get_etag() { return etag; };
 
   rgw_bucket& get_bucket() { return bucket; };
   void set_bucket(rgw_bucket& _bucket) {
@@ -210,13 +246,16 @@ struct RGWBucketAdminOpState {
   bufferlist& get_object_bl() { return object_bl; };
   std::map<std::string, bufferlist>& get_object_attrs() { return object_attrs; };
 
-  void set_check_time(const char *mtime, bool modified) {
+  void set_check_time(const char *mtime, bool if_unmodified) {
     parse_time(mtime, check_time);
-    check_modified = modified;
+    check_unmodified = if_unmodified;
   }
-  void set_check_etag(std::string& tag, bool match) {
+  void set_check_etag(const char *tag, bool match) {
     match_etag = match;
     etag = tag;
+  }
+  void set_read_range(const char *range) {
+    parse_range(range, ofs, end, &partial_content);
   }
 
   time_t *get_check_time() { return check_time; };
@@ -229,18 +268,20 @@ struct RGWBucketAdminOpState {
   bool is_user_op() { return !uid.empty(); };
   bool is_system_op() { return uid.empty(); }; 
   bool has_bucket_stored() { return bucket_stored; };
-  bool etag_must_match() { return (!etag.empty() && match_etag); };
-  bool etag_must_not_match() { return (!etag.empty() && !match_etag); };
-  bool will_check_modified() { return (check_time && check_modified); };
-  bool will_check_unmodified() { return (check_time && !check_modified); };
+  bool etag_must_match() { return (etag && match_etag); };
+  bool etag_must_not_match() { return (etag && !match_etag); };
+  bool will_check_modified() { return (check_time && !check_unmodified); };
+  bool will_check_unmodified() { return (check_time && check_unmodified); };
   bool will_fetch_data() { return fetch_data; };
+  bool will_dump_range() { return (valid_byte_range && partial_content); };
 
   void **get_handle() { return &handle; };
 
   RGWBucketAdminOpState() : list_buckets(false), stat_buckets(false), check_objects(false),
                             fix_index(false), delete_child_objects(false),
                             bucket_stored(false), match_etag(false),
-                            check_modified(false), fetch_data(false),
+                            check_unmodified(false), fetch_data(false),
+                            valid_byte_range(false), partial_content(false),
                             check_time(NULL), handle(NULL)  {}
 };
 

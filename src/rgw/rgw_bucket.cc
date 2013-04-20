@@ -550,7 +550,7 @@ int RGWBucket::get_object_head(RGWBucketAdminOpState& op_state)
 {
   int r;
   std::string object_name = op_state.get_object_name();
-  std::string etag = op_state.get_etag();
+  const char *etag = op_state.get_etag();
 
   rgw_bucket bucket = op_state.get_bucket();
   rgw_obj object = op_state.get_object();
@@ -575,9 +575,9 @@ int RGWBucket::get_object_head(RGWBucketAdminOpState& op_state)
   }
 
   if (op_state.etag_must_match()) {
-    if_match = etag.c_str();
+    if_match = etag;
   } else if (op_state.etag_must_not_match()) {
-    if_nomatch = etag.c_str();
+    if_nomatch = etag;
   }
 
   std::map<std::string, bufferlist> attrs = op_state.get_object_attrs();
@@ -645,8 +645,6 @@ int RGWBucket::iterate_object(RGWBucketAdminOpState& op_state)
   void *handle = op_state.get_handle();
 
   ret = store->get_obj_iterate(store->ctx(), &handle, object, ofs, end, &cb);
-  if (ret > 0)
-    ret = 0; // probably not nessesary
 
   store->finish_get_obj(&handle);
   return ret;
@@ -999,6 +997,17 @@ int RGWBucketAdminOp::remove_object(RGWRados *store, RGWBucketAdminOpState& op_s
     return ret;
 
   return bucket.remove_object(op_state);
+}
+
+int RGWBucketAdminOp::get_object(RGWRados *store, RGWBucketAdminOpState& op_state)
+{
+  RGWBucket bucket;
+
+  int ret = bucket.init(store, op_state);
+  if (ret < 0)
+    return ret;
+
+  return ret = bucket.get_object(op_state);
 }
 
 static int bucket_stats(RGWRados *store, std::string&  bucket_name, Formatter *formatter)
