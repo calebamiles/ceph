@@ -1047,6 +1047,7 @@ extern bool verify_object_permission(struct req_state *s, int perm);
  * by converting %-escaped strings into characters, etc*/
 extern bool url_decode(string& src_str, string& dest_str);
 
+extern int parse_range(const char *range, off_t& ofs, off_t& end, bool *partial_content);
 extern void calc_hmac_sha1(const char *key, int key_len,
                           const char *msg, int msg_len, char *dest);
 /* destination should be CEPH_CRYPTO_HMACSHA1_DIGESTSIZE bytes long */

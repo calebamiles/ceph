@@ -56,62 +56,6 @@ public:
 
 static MultipartMetaFilter mp_filter;
 
-static int parse_range(const char *range, off_t& ofs, off_t& end, bool *partial_content)
-{
-  int r = -ERANGE;
-  string s(range);
-  string ofs_str;
-  string end_str;
-
-  *partial_content = false;
-
-  int pos = s.find("bytes=");
-  if (pos < 0) {
-    pos = 0;
-    while (isspace(s[pos]))
-      pos++;
-    int end = pos;
-    while (isalpha(s[end]))
-      end++;
-    if (strncasecmp(s.c_str(), "bytes", end - pos) != 0)
-      return 0;
-    while (isspace(s[end]))
-      end++;
-    if (s[end] != '=')
-      return 0;
-    s = s.substr(end + 1);
-  } else {
-    s = s.substr(pos + 6); /* size of("bytes=")  */
-  }
-  pos = s.find('-');
-  if (pos < 0)
-    goto done;
-
-  *partial_content = true;
-
-  ofs_str = s.substr(0, pos);
-  end_str = s.substr(pos + 1);
-  if (end_str.length()) {
-    end = atoll(end_str.c_str());
-    if (end < 0)
-      goto done;
-  }
-
-  if (ofs_str.length()) {
-    ofs = atoll(ofs_str.c_str());
-  } else { // RFC2616 suffix-byte-range-spec
-    ofs = -end;
-    end = -1;
-  }
-
-  if (end >= 0 && end < ofs)
-    goto done;
-
-  r = 0;
-done:
-  return r;
-}
-
 static void format_xattr(std::string &xattr)
 {
   /* If the extended attribute is not valid UTF-8, we encode it using quoted-printable
@@ -639,7 +583,7 @@ int RGWGetObj::init_common()
     unmod_ptr = &unmod_time;
   }
 
-  return 0;
+  return 0; 
 }
 
 int RGWListBuckets::verify_permission()
