@@ -326,11 +326,25 @@ int rgw_build_policies(RGWRados *store, struct req_state *s, bool only_bucket, b
   return ret;
 }
 
+int RGWOp::verify_operation_permission()
+{
+  if (!s->cct->_conf->rgw_enable_op_perms)
+    return 0;
+
+  if ((op_perm & s->user.permitted_ops) != op_perm)
+    return -EACCES;
+
+  return 0;
+}
+
 int RGWGetObj::verify_permission()
 {
   obj.init(s->bucket, s->object_str);
   store->set_atomic(s->obj_ctx, obj);
   store->set_prefetch_data(s->obj_ctx, obj);
+
+  if (verify_operation_permission() < 0)
+    return -EACCES;
 
   if (!verify_object_permission(s, RGW_PERM_READ))
     return -EACCES;
@@ -644,6 +658,9 @@ int RGWGetObj::init_common()
 
 int RGWListBuckets::verify_permission()
 {
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   return 0;
 }
 
@@ -770,6 +787,9 @@ void RGWStatBucket::execute()
 
 int RGWListBucket::verify_permission()
 {
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   if (!verify_bucket_permission(s, RGW_PERM_READ))
     return -EACCES;
 
@@ -820,6 +840,9 @@ int RGWCreateBucket::verify_permission()
   if (!rgw_user_is_authenticated(s->user))
     return -EACCES;
 
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+ 
   if (s->user.max_buckets) {
     RGWUserBuckets buckets;
     string marker;
@@ -908,6 +931,9 @@ int RGWDeleteBucket::verify_permission()
   if (!verify_bucket_permission(s, RGW_PERM_WRITE))
     return -EACCES;
 
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   return 0;
 }
 
@@ -934,6 +960,9 @@ struct put_obj_aio_info {
 int RGWPutObj::verify_permission()
 {
   if (!verify_bucket_permission(s, RGW_PERM_WRITE))
+    return -EACCES;
+
+  if (verify_operation_permission() < 0)
     return -EACCES;
 
   return 0;
@@ -1437,6 +1466,9 @@ done:
 
 int RGWPostObj::verify_permission()
 {
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   return 0;
 }
 
@@ -1556,6 +1588,9 @@ int RGWPutMetadata::verify_permission()
   if (!verify_object_permission(s, RGW_PERM_WRITE))
     return -EACCES;
 
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   return 0;
 }
 
@@ -1608,6 +1643,9 @@ int RGWDeleteObj::verify_permission()
   if (!verify_bucket_permission(s, RGW_PERM_WRITE))
     return -EACCES;
 
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   return 0;
 }
 
@@ -1650,6 +1688,9 @@ bool RGWCopyObj::parse_copy_location(const char *src, string& bucket_name, strin
 
 int RGWCopyObj::verify_permission()
 {
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   string empty_str;
   RGWAccessControlPolicy src_policy(s->cct);
   ret = get_params();
@@ -2071,6 +2112,9 @@ int RGWInitMultipart::verify_permission()
   if (!verify_bucket_permission(s, RGW_PERM_WRITE))
     return -EACCES;
 
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   return 0;
 }
 
@@ -2166,6 +2210,9 @@ static int get_multiparts_info(RGWRados *store, struct req_state *s, string& met
 int RGWCompleteMultipart::verify_permission()
 {
   if (!verify_bucket_permission(s, RGW_PERM_WRITE))
+    return -EACCES;
+
+  if (verify_operation_permission() < 0)
     return -EACCES;
 
   return 0;
@@ -2305,8 +2352,11 @@ void RGWCompleteMultipart::execute()
 }
 
 int RGWAbortMultipart::verify_permission()
-{
+{ 
   if (!verify_bucket_permission(s, RGW_PERM_WRITE))
+    return -EACCES;
+
+  if (verify_operation_permission() < 0)
     return -EACCES;
 
   return 0;
@@ -2369,6 +2419,9 @@ int RGWListMultipart::verify_permission()
   if (!verify_object_permission(s, RGW_PERM_READ))
     return -EACCES;
 
+  if (verify_operation_permission() < 0)
+    return -EACCES;
+
   return 0;
 }
 
@@ -2391,6 +2444,9 @@ void RGWListMultipart::execute()
 int RGWListBucketMultiparts::verify_permission()
 {
   if (!verify_bucket_permission(s, RGW_PERM_READ))
+    return -EACCES;
+
+  if (verify_operation_permission() < 0)
     return -EACCES;
 
   return 0;
@@ -2437,6 +2493,9 @@ void RGWListBucketMultiparts::execute()
 int RGWDeleteMultiObj::verify_permission()
 {
   if (!verify_bucket_permission(s, RGW_PERM_WRITE))
+    return -EACCES;
+
+  if (verify_operation_permission() < 0)
     return -EACCES;
 
   return 0;

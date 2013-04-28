@@ -114,8 +114,15 @@ using ceph::crypto::MD5;
 #define ERR_USER_SUSPENDED       2100
 #define ERR_INTERNAL_ERROR       2200
 
-typedef void *RGWAccessHandle;
+#define RGW_OP_PERM_NONE         0x0
+#define RGW_OP_PERM_READ         0x01
+#define RGW_OP_PERM_WRITE        0x02
+#define RGW_OP_PERM_DELETE       0x04
+#define RGW_OP_PERM_NOWRITE      (RGW_OP_PERM_READ | RGW_OP_PERM_DELETE)
+#define RGW_OP_PERM_FULL         (RGW_OP_PERM_READ | RGW_OP_PERM_WRITE | \
+                                  RGW_OP_PERM_DELETE)
 
+typedef void *RGWAccessHandle;
 
 /* perf counter */
 
@@ -148,7 +155,6 @@ enum {
 
   l_rgw_last,
 };
-
 
  /* size should be the required string size + 1 */
 extern int gen_rand_base64(CephContext *cct, char *dest, int size);
@@ -382,8 +388,11 @@ struct RGWUserInfo
   __u8 suspended;
   uint32_t max_buckets;
   RGWUserCaps caps;
+  __u8 permitted_ops;
 
-  RGWUserInfo() : auid(0), suspended(0), max_buckets(RGW_DEFAULT_MAX_BUCKETS) {}
+  RGWUserInfo() : auid(0), suspended(0),
+             max_buckets(RGW_DEFAULT_MAX_BUCKETS),
+             permitted_ops(RGW_OP_PERM_FULL) {}
 
   void encode(bufferlist& bl) const {
      ENCODE_START(11, 9, bl);
@@ -417,6 +426,7 @@ struct RGWUserInfo
      ::encode(swift_keys, bl);
      ::encode(max_buckets, bl);
      ::encode(caps, bl);
+     ::encode(permitted_ops, bl);
      ENCODE_FINISH(bl);
   }
   void decode(bufferlist::iterator& bl) {
@@ -461,6 +471,9 @@ struct RGWUserInfo
     }
     if (struct_v >= 11) {
       ::decode(caps, bl);
+    }
+    if (struct_v >= 12) {
+      ::decode(permitted_ops, bl);
     }
     DECODE_FINISH(bl);
   }

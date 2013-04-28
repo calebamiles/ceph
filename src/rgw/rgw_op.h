@@ -38,8 +38,11 @@ protected:
   struct req_state *s;
   RGWHandler *dialect_handler;
   RGWRados *store;
+  __u8 op_perm;
 public:
-  RGWOp() : s(NULL), dialect_handler(NULL), store(NULL) {}
+  RGWOp() : s(NULL), dialect_handler(NULL), store(NULL),
+              op_perm(RGW_OP_PERM_NONE) {}
+
   virtual ~RGWOp() {}
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *dialect_handler) {
@@ -54,6 +57,7 @@ public:
   virtual void send_response() {}
   virtual void complete() { send_response(); }
   virtual const char *name() = 0;
+  virtual int verify_operation_permission();
 };
 
 class RGWGetObj : public RGWOp {
@@ -99,6 +103,7 @@ public:
     get_data = false;
     partial_content = false;
     ret = 0;
+    op_perm = RGW_OP_PERM_READ;
  }
 
   virtual bool prefetch_data() { return true; }
@@ -134,6 +139,7 @@ protected:
 public:
   RGWListBuckets() : ret(0), sent_data(false) {
     limit = limit_max = RGW_LIST_BUCKETS_LIMIT_MAX;
+    op_perm = RGW_OP_PERM_READ;
   }
 
   int verify_permission();
@@ -165,6 +171,7 @@ public:
     buckets_objcount = 0;
     buckets_size = 0;
     buckets_size_rounded = 0;
+    op_perm = RGW_OP_PERM_NONE; // all users should be able to get their stats
   }
 
   int verify_permission();
@@ -196,6 +203,7 @@ public:
     ret = 0;
     default_max = 0;
     is_truncated = false;
+    op_perm = RGW_OP_PERM_READ;
   }
   int verify_permission();
   void execute();
@@ -207,7 +215,10 @@ public:
 
 class RGWGetBucketLogging : public RGWOp {
 public:
-  RGWGetBucketLogging() {}
+  RGWGetBucketLogging() {
+    op_perm = RGW_OP_PERM_NONE;
+  }
+
   int verify_permission();
   void execute() {}
 
@@ -221,7 +232,10 @@ protected:
   RGWBucketEnt bucket;
 
 public:
-  RGWStatBucket() : ret(0) {}
+  RGWStatBucket() : ret(0) {
+    op_perm = RGW_OP_PERM_NONE;
+  }
+
   ~RGWStatBucket() {}
 
   int verify_permission();
@@ -237,7 +251,9 @@ protected:
   RGWAccessControlPolicy policy;
 
 public:
-  RGWCreateBucket() : ret(0) {}
+  RGWCreateBucket() : ret(0) {
+    op_perm = RGW_OP_PERM_WRITE;
+  }
 
   int verify_permission();
   void execute();
@@ -255,7 +271,9 @@ protected:
   int ret;
 
 public:
-  RGWDeleteBucket() : ret(0) {}
+  RGWDeleteBucket() : ret(0) {
+    op_perm = RGW_OP_PERM_DELETE;
+  }
 
   int verify_permission();
   void execute();
@@ -313,6 +331,7 @@ public:
     supplied_etag = NULL;
     chunked_upload = false;
     obj_manifest = NULL;
+    op_perm = RGW_OP_PERM_WRITE;
   }
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *h) {
@@ -354,7 +373,10 @@ protected:
 public:
   RGWPostObj() : min_len(0), max_len(LLONG_MAX), ret(0), len(0), ofs(0),
 		 supplied_md5_b64(NULL), supplied_etag(NULL),
-		 data_pending(false) {}
+		 data_pending(false) {
+
+    op_perm = RGW_OP_PERM_WRITE;
+  }
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *h) {
     RGWOp::init(store, s, h);
@@ -386,6 +408,7 @@ public:
     has_cors = false;
     has_policy = false;
     ret = 0;
+    op_perm = RGW_OP_PERM_WRITE;
   }
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *h) {
@@ -405,7 +428,9 @@ protected:
   int ret;
 
 public:
-  RGWDeleteObj() : ret(0) {}
+  RGWDeleteObj() : ret(0) {
+    op_perm = RGW_OP_PERM_DELETE;
+  }
 
   int verify_permission();
   void execute();
@@ -460,6 +485,7 @@ public:
     ret = 0;
     mtime = 0;
     replace_attrs = false;
+    op_perm = RGW_OP_PERM_WRITE;
   }
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *h) {
@@ -596,6 +622,7 @@ protected:
 public:
   RGWInitMultipart() {
     ret = 0;
+    op_perm = RGW_OP_PERM_WRITE;
   }
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *h) {
@@ -625,6 +652,7 @@ public:
     data = NULL;
     len = 0;
     min_part_size = RGW_MIN_MULTIPART_SIZE;
+    op_perm = RGW_OP_PERM_READ; // completing a mp upload perserves object size
   }
   virtual ~RGWCompleteMultipart() {
     free(data);
@@ -643,7 +671,9 @@ protected:
   int ret;
 
 public:
-  RGWAbortMultipart() : ret(0) {}
+  RGWAbortMultipart() : ret(0) {
+    op_perm = RGW_OP_PERM_DELETE;
+  }
 
   int verify_permission();
   void execute();
@@ -666,6 +696,7 @@ public:
     ret = 0;
     max_parts = 1000;
     marker = 0;
+    op_perm = RGW_OP_PERM_READ;
   }
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *h) {
@@ -773,6 +804,7 @@ public:
   RGWListBucketMultiparts() {
     ret = 0;
     is_truncated = false;
+    op_perm = RGW_OP_PERM_READ;
   }
 
   virtual void init(RGWRados *store, struct req_state *s, RGWHandler *h) {
@@ -808,6 +840,7 @@ public:
     data = NULL;
     quiet = false;
     status_dumped = false;
+    op_perm = RGW_OP_PERM_DELETE;
   }
   int verify_permission();
   void execute();

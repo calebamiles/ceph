@@ -138,6 +138,7 @@ struct RGWUserAdminOpState {
   std::string display_name;
   uint32_t max_buckets;
   __u8 suspended;
+  __u8 op_perm;
   std::string caps;
 
   // subuser attributes
@@ -282,6 +283,9 @@ struct RGWUserAdminOpState {
     purge_keys = true;
     key_op = true;
   }
+  void set_op_perm(__u8 perm) {
+    op_perm = perm;
+  }
 
   bool is_populated() { return populated; };
   bool is_initialized() { return initialized; };
@@ -310,6 +314,7 @@ struct RGWUserAdminOpState {
   void set_purge_data(bool flag) { purge_data = flag; };
   void set_generate_subuser(bool flag) { gen_subuser = flag; };
   __u8 get_suspension_status() { return suspended; };
+  __u8 get_op_permission() { return op_perm; };
   int32_t get_key_type() {return key_type; };
   uint32_t get_subuser_perm() { return perm_mask; };
   uint32_t get_max_buckets() { return max_buckets; };
@@ -370,6 +375,7 @@ struct RGWUserAdminOpState {
     key_type = -1;
     perm_mask = 0;
     suspended = 0;
+    op_perm = RGW_OP_PERM_FULL;
 
     existing_user = false;
     existing_key = false;

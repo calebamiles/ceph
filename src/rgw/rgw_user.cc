@@ -29,6 +29,7 @@ void rgw_get_anon_user(RGWUserInfo& info)
   info.user_id = RGW_USER_ANON_ID;
   info.display_name.clear();
   info.access_keys.clear();
+  info.permitted_ops = RGW_OP_PERM_READ | RGW_OP_PERM_WRITE;
 }
 
 bool rgw_user_is_authenticated(RGWUserInfo& info)

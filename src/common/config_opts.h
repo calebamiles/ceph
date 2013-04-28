@@ -591,6 +591,7 @@ OPTION(rgw_get_obj_window_size, OPT_INT, 16 << 20) // window size in bytes for s
 OPTION(rgw_get_obj_max_req_size, OPT_INT, 4 << 20) // max length of a single get obj rados op
 OPTION(rgw_relaxed_s3_bucket_names, OPT_BOOL, false) // enable relaxed bucket name rules for US region buckets
 OPTION(rgw_list_buckets_max_chunk, OPT_INT, 1000) // max buckets to retrieve in a single op when listing user buckets
+OPTION(rgw_enable_op_perms, OPT_BOOL, false) // enable/disable operation permissions for quota enforcement
 
 OPTION(mutex_perf_counter, OPT_BOOL, false) // enable/disable mutex perf counter
 
